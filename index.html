@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PALAEMON · Maritime Threat Monitor</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+<style>
+:root {
+  --orange:    #F15D20;
+  --orange-dk: #c44a18;
+  --orange-gl: rgba(241,93,32,0.15);
+  --bg:        #07080a;
+  --surface:   #0d0f13;
+  --surface2:  #141720;
+  --border:    rgba(241,93,32,0.25);
+  --border-hi: rgba(241,93,32,0.6);
+  --text:      #e8eaf0;
+  --text-dim:  #6b7280;
+  --text-mid:  #9ca3af;
+  --green:     #22c55e;
+  --sidebar-w: 260px;
+  --topbar-h:  52px;
+  --mono: 'Space Mono', monospace;
+  --sans: 'Rajdhani', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── TOP BAR ────────────────────────────────────── */
+#topbar {
+  height: var(--topbar-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1100;
+}
+
+#brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  border-right: 1px solid var(--border);
+  height: 100%;
+  flex-shrink: 0;
+}
+
+#brand .logo-mark {
+  width: 28px; height: 28px;
+  border: 2px solid var(--orange);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+#brand .logo-mark::after {
+  content: '';
+  width: 8px; height: 8px;
+  background: var(--orange);
+  border-radius: 50%;
+}
+
+#brand .logo-text {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 3px;
+  color: var(--text);
+}
+#brand .logo-sub {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+#topbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#topbar-controls::-webkit-scrollbar { display: none; }
+
+/* Date inputs */
+.date-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.date-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+input[type="date"] {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  height: 30px;
+  padding: 0 8px;
+  outline: none;
+  cursor: pointer;
+  color-scheme: dark;
+  transition: border-color .2s;
+}
+input[type="date"]:hover, input[type="date"]:focus {
+  border-color: var(--border-hi);
+}
+
+.sep { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; margin: 0 4px; }
+
+/* Timeline controls */
+.tl-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-mid);
+  font-family: var(--mono);
+  font-size: 11px;
+  height: 30px;
+  padding: 0 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all .2s;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.tl-btn:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-gl); }
+.tl-btn.active { border-color: var(--orange); color: var(--orange); background: var(--orange-gl); }
+.tl-btn.icon-only { padding: 0 8px; }
+
+/* Map style selector */
+.style-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-mid);
+  font-family: var(--mono);
+  font-size: 11px;
+  height: 30px;
+  padding: 0 8px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+.style-select:hover { border-color: var(--border-hi); }
+
+/* Toggle switches */
+.toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.toggle-wrap span {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  user-select: none;
+}
+.toggle {
+  appearance: none;
+  width: 32px; height: 17px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  position: relative;
+  transition: background .2s, border-color .2s;
+  flex-shrink: 0;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  left: 2px; top: 50%;
+  transform: translateY(-50%);
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: left .2s, background .2s;
+}
+.toggle:checked { background: var(--orange-gl); border-color: var(--orange); }
+.toggle:checked::after { left: 17px; background: var(--orange); }
+
+/* AIS status badge */
+#ais-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0 14px;
+  border-left: 1px solid var(--border);
+  height: 100%;
+}
+#ais-status .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+#ais-status.live .dot  { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+#ais-status.live       { color: var(--green); }
+#ais-status.error .dot { background: #ef4444; }
+#ais-status.error      { color: #ef4444; }
+
+@keyframes pulse {
+  0%,100% { opacity: 1; } 50% { opacity: .4; }
+}
+
+/* ─── BODY SPLIT ────────────────────────────────── */
+#body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ─── SIDEBAR ───────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  display: flex;
+  flex-direction: column;
+}
+#sidebar::-webkit-scrollbar { width: 4px; }
+#sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.sidebar-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-header {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--orange);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* AIS panel */
+.ais-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ais-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ais-row label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.ais-input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  height: 28px;
+  padding: 0 8px;
+  outline: none;
+  width: 90px;
+  transition: border-color .2s;
+}
+.ais-input:focus { border-color: var(--border-hi); }
+
+.ais-refresh-btn {
+  width: 100%;
+  height: 30px;
+  background: transparent;
+  border: 1px solid var(--orange);
+  color: var(--orange);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all .2s;
+  text-transform: uppercase;
+}
+.ais-refresh-btn:hover { background: var(--orange-gl); }
+.ais-refresh-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+#ais-vessel-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* Sidebar filter fields */
+.filter-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.filter-input {
+  width: 100%;
+  height: 30px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 0 8px;
+  outline: none;
+  margin-bottom: 8px;
+  transition: border-color .2s;
+}
+.filter-input:focus { border-color: var(--border-hi); }
+.filter-input::placeholder { color: var(--text-dim); }
+
+.tag-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 8px;
+  margin-bottom: 10px;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--orange-gl);
+  border: 1px solid var(--border-hi);
+  color: var(--orange);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 6px;
+}
+.tag button {
+  background: none;
+  border: none;
+  color: var(--orange);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+}
+
+/* Multi-select dropdown */
+.multi-select { position: relative; margin-bottom: 8px; }
+.ms-btn {
+  width: 100%;
+  height: 30px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-mid);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 0 28px 0 8px;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition: border-color .2s;
+}
+.ms-btn:hover { border-color: var(--border-hi); }
+.ms-btn::after {
+  content: "▾";
+  position: absolute;
+  right: 8px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.ms-options {
+  position: fixed;
+  background: var(--surface2);
+  border: 1px solid var(--border-hi);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 9999;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+.ms-options::-webkit-scrollbar { width: 4px; }
+.ms-options::-webkit-scrollbar-thumb { background: var(--border); }
+
+.ms-search {
+  position: sticky;
+  top: 0;
+  width: calc(100% - 12px);
+  margin: 6px;
+  height: 26px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 0 8px;
+  outline: none;
+  display: block;
+}
+.ms-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-mid);
+  white-space: nowrap;
+}
+.ms-options label:hover { background: var(--orange-gl); color: var(--text); }
+.ms-options input[type="checkbox"] {
+  accent-color: var(--orange);
+  width: 12px; height: 12px;
+  flex-shrink: 0;
+}
+
+/* Single-select */
+.ss-select { position: relative; margin-bottom: 8px; }
+.ss-btn {
+  width: 100%;
+  height: 30px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-mid);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 0 28px 0 8px;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition: border-color .2s;
+}
+.ss-btn:hover { border-color: var(--border-hi); }
+.ss-btn::after {
+  content: "▾";
+  position: absolute;
+  right: 8px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  pointer-events: none;
+}
+.ss-options {
+  position: fixed;
+  background: var(--surface2);
+  border: 1px solid var(--border-hi);
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+.ss-option {
+  padding: 7px 10px;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-mid);
+  white-space: nowrap;
+}
+.ss-option:hover { background: var(--orange-gl); color: var(--text); }
+
+/* Reset button */
+.reset-btn {
+  width: 100%;
+  height: 30px;
+  background: transparent;
+  border: 1px solid #ef444455;
+  color: #ef4444;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all .2s;
+  margin-top: 4px;
+}
+.reset-btn:hover { background: rgba(239,68,68,.1); border-color: #ef4444; }
+
+/* Stats panel at bottom of sidebar */
+#stats-panel {
+  margin-top: auto;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.stat-label { font-family: var(--mono); font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; }
+.stat-value { font-family: var(--mono); font-size: 14px; color: var(--orange); font-weight: 700; }
+
+/* ─── MAP ────────────────────────────────────────── */
+#map-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+#map { width: 100%; height: 100%; }
+
+/* Map overlays */
+.map-overlay {
+  position: absolute;
+  z-index: 900;
+  pointer-events: none;
+}
+
+#timeline-date {
+  top: 12px; right: 12px;
+  background: rgba(7,8,10,.85);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--orange);
+  letter-spacing: 1px;
+  backdrop-filter: blur(4px);
+}
+
+#heat-legend {
+  bottom: 36px; right: 12px;
+  background: rgba(7,8,10,.85);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+  min-width: 180px;
+}
+.legend-title { color: var(--text-mid); margin-bottom: 6px; }
+.legend-bar {
+  height: 8px;
+  background: linear-gradient(to right, #3b82f6, #22c55e, #eab308, #ef4444);
+  margin: 4px 0;
+}
+.legend-labels { display: flex; justify-content: space-between; font-size: 8px; }
+
+/* AIS legend */
+#ais-legend {
+  bottom: 36px; left: 12px;
+  background: rgba(7,8,10,.85);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: .5px;
+  backdrop-filter: blur(4px);
+}
+.ais-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 4px;
+  font-size: 9px;
+}
+.ais-legend-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Timeline progress */
+#tl-progress-wrap {
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50%;
+  height: 3px;
+  background: rgba(255,255,255,.08);
+  pointer-events: none;
+}
+#tl-progress {
+  height: 100%;
+  width: 0%;
+  background: var(--orange);
+  transition: width .3s linear;
+  box-shadow: 0 0 6px var(--orange);
+}
+
+/* Leaflet popup override */
+.leaflet-popup-content-wrapper {
+  background: var(--surface2) !important;
+  border: 1px solid var(--border-hi) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6) !important;
+  color: var(--text) !important;
+  font-family: var(--mono) !important;
+  font-size: 11px !important;
+}
+.leaflet-popup-tip { background: var(--surface2) !important; }
+.leaflet-popup-close-button { color: var(--text-dim) !important; font-size: 16px !important; }
+.popup-row { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+.popup-key { color: var(--text-dim); min-width: 110px; flex-shrink: 0; }
+.popup-val { color: var(--text); word-break: break-word; }
+.popup-title {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--orange);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.popup-ais-badge {
+  display: inline-block;
+  background: rgba(34,197,94,.15);
+  border: 1px solid rgba(34,197,94,.4);
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 6px;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ═══ TOP BAR ════════════════════════════════════ -->
+<div id="topbar">
+  <div id="brand">
+    <div class="logo-mark"></div>
+    <div>
+      <div class="logo-text">PALAEMON</div>
+      <div class="logo-sub">Maritime Threat Monitor</div>
+    </div>
+  </div>
+
+  <div id="topbar-controls">
+    <div class="date-group">
+      <span class="date-label">From</span>
+      <input type="date" id="startDate" />
+    </div>
+    <div class="date-group">
+      <span class="date-label">To</span>
+      <input type="date" id="endDate" />
+    </div>
+
+    <div class="sep"></div>
+
+    <button class="tl-btn icon-only" id="timelineStartBtn" title="Jump to start" onclick="jumpTimelineStart()">⏮</button>
+    <button class="tl-btn" id="timelineBtn" onclick="toggleTimeline()">▶ Play</button>
+    <button class="tl-btn icon-only" id="timelineEndBtn" title="Jump to end" onclick="jumpTimelineEnd()">⏭</button>
+    <button class="tl-btn" id="speedBtn" onclick="speedUpTimeline()">1×</button>
+
+    <div class="sep"></div>
+
+    <select class="style-select" id="mapStyleSelect" onchange="changeMapStyle(this.value)">
+      <option value="dark" selected>Dark</option>
+      <option value="light">Light</option>
+      <option value="satellite">Satellite</option>
+    </select>
+
+    <label class="toggle-wrap" title="Toggle heatmap">
+      <input type="checkbox" class="toggle" id="showHeatmap" checked />
+      <span>Heatmap</span>
+    </label>
+
+    <label class="toggle-wrap" title="Toggle live AIS vessels">
+      <input type="checkbox" class="toggle" id="showAIS" />
+      <span>Live AIS</span>
+    </label>
+  </div>
+
+  <div id="ais-status">
+    <div class="dot"></div>
+    <span id="ais-status-text">AIS OFFLINE</span>
+  </div>
+</div>
+
+<!-- ═══ BODY ══════════════════════════════════════ -->
+<div id="body">
+
+  <!-- ─── SIDEBAR ──────────────────────────────── -->
+  <div id="sidebar">
+
+    <!-- AIS Section -->
+    <div class="sidebar-section">
+      <div class="section-header">Live AIS</div>
+      <div class="ais-control">
+        <div class="ais-row">
+          <label>Timespan (min)</label>
+          <input type="number" class="ais-input" id="aisTimespan" value="60" min="10" max="1440" />
+        </div>
+        <div class="ais-row">
+          <label>Vessel Type</label>
+          <input type="text" class="ais-input" id="aisVesselType" placeholder="All" />
+        </div>
+        <button class="ais-refresh-btn" id="aisRefreshBtn" onclick="fetchAIS()">↻ Refresh AIS</button>
+        <div id="ais-vessel-count">— vessels loaded</div>
+      </div>
+    </div>
+
+    <!-- Incident Filters -->
+    <div class="sidebar-section">
+      <div class="section-header">Filters</div>
+
+      <span class="filter-label">IMO Number</span>
+      <input type="text" class="filter-input" id="imoInput" placeholder="Enter IMO + press Enter" />
+      <div id="imoTags" class="tag-container"></div>
+
+      <span class="filter-label">Ship Name</span>
+      <input type="text" class="filter-input" id="shipNameInput" placeholder="Enter name + press Enter" />
+      <div id="shipNameTags" class="tag-container"></div>
+
+      <span class="filter-label">Ship Type</span>
+      <div class="multi-select" id="shipTypeMS">
+        <button class="ms-btn" id="shipTypeBtn">All Ship Types</button>
+        <div class="ms-options hidden" id="shipTypeOpts"></div>
+      </div>
+
+      <span class="filter-label">Maritime Zone</span>
+      <div class="multi-select" id="areaMS">
+        <button class="ms-btn" id="areaBtn">All Maritime Zones</button>
+        <div class="ms-options hidden" id="areaOpts"></div>
+      </div>
+
+      <span class="filter-label">Reporting State</span>
+      <div class="multi-select" id="stateMS">
+        <button class="ms-btn" id="stateBtn">All States</button>
+        <div class="ms-options hidden" id="stateOpts"></div>
+      </div>
+
+      <span class="filter-label">Reported</span>
+      <div class="ss-select" id="reportedSS">
+        <button class="ss-btn" id="reportedBtn">All</button>
+        <div class="ss-options hidden" id="reportedOpts">
+          <div class="ss-option" data-value="All">All</div>
+          <div class="ss-option" data-value="Yes">Yes</div>
+          <div class="ss-option" data-value="No">No</div>
+        </div>
+      </div>
+
+      <button class="reset-btn" id="resetFiltersBtn">✕ Reset Filters</button>
+    </div>
+
+    <!-- Stats -->
+    <div id="stats-panel">
+      <div class="section-header">Stats</div>
+      <div class="stat-row">
+        <span class="stat-label">Incidents shown</span>
+        <span class="stat-value" id="statIncidents">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">AIS vessels</span>
+        <span class="stat-value" id="statVessels">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Date</span>
+        <span class="stat-value" id="statDate" style="font-size:11px">—</span>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- ─── MAP ──────────────────────────────────── -->
+  <div id="map-wrap">
+    <div id="map"></div>
+
+    <div class="map-overlay" id="timeline-date"></div>
+
+    <div class="map-overlay" id="heat-legend">
+      <div class="legend-title">Incident Recency</div>
+      <div class="legend-bar"></div>
+      <div class="legend-labels"><span>30d ago</span><span>Today</span></div>
+    </div>
+
+    <div class="map-overlay" id="ais-legend" style="display:none;">
+      <div class="legend-title" style="color:var(--text-mid);margin-bottom:6px;">AIS Vessels</div>
+      <div class="ais-legend-item"><div class="ais-legend-dot" style="background:#22c55e;"></div>Cargo</div>
+      <div class="ais-legend-item"><div class="ais-legend-dot" style="background:#3b82f6;"></div>Tanker</div>
+      <div class="ais-legend-item"><div class="ais-legend-dot" style="background:#a78bfa;"></div>Passenger</div>
+      <div class="ais-legend-item"><div class="ais-legend-dot" style="background:#fbbf24;"></div>Other</div>
+    </div>
+
+    <div class="map-overlay" id="tl-progress-wrap">
+      <div id="tl-progress"></div>
+    </div>
+  </div>
+
+</div><!-- /body -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONFIG — update PROXY_BASE to your Vercel deployment URL
+// e.g. "https://your-project.vercel.app"
+// During local dev use "" (empty string = relative path)
+// ═══════════════════════════════════════════════════════
+const PROXY_BASE = "";   // ← CHANGE THIS after deploying to Vercel
+
+// ─── State ───────────────────────────────────────────
+let allData = [];
+let imoTags = [], shipNameTags = [];
+let selectedShipTypes = new Set(["All"]);
+let selectedAreas     = new Set(["All"]);
+let selectedStates    = new Set(["All"]);
+let selectedReported  = "All";
+let activePopup = null;
+let heatLayer, aisLayer = L.layerGroup();
+let markerGroup = null;
+let timelineDates = [], timelineIndex = 0, timelineTimer = null;
+let isPlaying = false, speedMultiplier = 1;
+let aisData = [];
+
+// ─── Map init ────────────────────────────────────────
+const map = L.map("map", { zoomControl: false }).setView([10, 20], 2);
+L.control.zoom({ position: "bottomright" }).addTo(map);
+
+const tileLayers = {
+  dark:      L.tileLayer("https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png", { attribution: "© CartoDB © OSM" }),
+  light:     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                          { attribution: "© OpenStreetMap" }),
+  satellite: L.tileLayer("https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",                         { attribution: "© Google Maps" }),
+};
+tileLayers.dark.addTo(map);
+
+markerGroup = L.layerGroup().addTo(map);
+aisLayer.addTo(map);
+
+function changeMapStyle(v) {
+  Object.values(tileLayers).forEach(l => map.hasLayer(l) && map.removeLayer(l));
+  tileLayers[v].addTo(map);
+  renderMarkersUpTo(getCurrentDate());
+}
+
+// ─── Date helpers ────────────────────────────────────
+function fmtDMY(d) {
+  return `${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}-${d.getFullYear()}`;
+}
+function getCurrentDate() {
+  const t = document.getElementById("timeline-date").textContent;
+  if (!t) return new Date();
+  const [dd,mm,yyyy] = t.split("-").map(Number);
+  return new Date(yyyy, mm-1, dd);
+}
+
+// ─── Date limits ─────────────────────────────────────
+(function(){
+  const t = new Date();
+  const s = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;
+  document.getElementById("startDate").max = s;
+  document.getElementById("endDate").max   = s;
+})();
+
+// ─── Tag inputs ──────────────────────────────────────
+function setupTagInput(inputId, containerId, arr) {
+  const el = document.getElementById(inputId);
+  el.addEventListener("keydown", e => {
+    if (e.key === "Enter" && el.value.trim()) {
+      e.preventDefault();
+      const v = el.value.trim().toLowerCase();
+      if (!arr.includes(v)) { arr.push(v); renderTags(containerId, arr); refresh(); }
+      el.value = "";
+    }
+  });
+}
+function renderTags(containerId, arr) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = "";
+  arr.forEach(tag => {
+    const d = document.createElement("div"); d.className = "tag";
+    d.innerHTML = `${tag}<button>×</button>`;
+    d.querySelector("button").onclick = () => { arr.splice(arr.indexOf(tag),1); renderTags(containerId,arr); refresh(); };
+    c.appendChild(d);
+  });
+}
+setupTagInput("imoInput","imoTags",imoTags);
+setupTagInput("shipNameInput","shipNameTags",shipNameTags);
+
+// ─── Multi-select helper ──────────────────────────────
+function buildMultiSelect(btnId, optsId, selectedSet, label, dataKey) {
+  const btn  = document.getElementById(btnId);
+  const opts = document.getElementById(optsId);
+
+  // Search box
+  const search = document.createElement("input");
+  search.type = "text"; search.className = "ms-search"; search.placeholder = `Search…`;
+  opts.appendChild(search);
+
+  // All option
+  const allLbl = document.createElement("label");
+  allLbl.innerHTML = `<input type="checkbox" value="All" checked> All ${label}`;
+  opts.appendChild(allLbl);
+  allLbl.querySelector("input").addEventListener("change", e => {
+    if (e.target.checked) {
+      selectedSet.clear(); selectedSet.add("All");
+      opts.querySelectorAll("input[type=checkbox]").forEach(cb => { if (cb.value!=="All") cb.checked=false; });
+    } else { selectedSet.delete("All"); }
+    updateMSBtn(btnId, selectedSet, label);
+    refresh();
+  });
+
+  // Data options
+  const vals = [...new Set(allData.map(i=>i[dataKey]).filter(Boolean))].sort();
+  vals.forEach(val => {
+    const lbl = document.createElement("label");
+    lbl.innerHTML = `<input type="checkbox" value="${val}"> ${val}`;
+    opts.appendChild(lbl);
+    lbl.querySelector("input").addEventListener("change", e => {
+      if (e.target.checked) {
+        selectedSet.add(val); selectedSet.delete("All");
+        opts.querySelector("input[value='All']").checked = false;
+      } else { selectedSet.delete(val); }
+      if (!selectedSet.size) { selectedSet.add("All"); opts.querySelector("input[value='All']").checked = true; }
+      updateMSBtn(btnId, selectedSet, label);
+      refresh();
+    });
+  });
+
+  search.addEventListener("input", () => {
+    const t = search.value.toLowerCase();
+    opts.querySelectorAll("label").forEach(lbl => {
+      const cb = lbl.querySelector("input");
+      lbl.style.display = (cb?.value==="All" || lbl.textContent.toLowerCase().includes(t)) ? "" : "none";
+    });
+  });
+
+  btn.addEventListener("click", e => {
+    e.stopPropagation(); closeAllDropdowns(optsId);
+    opts.classList.toggle("hidden");
+    if (!opts.classList.contains("hidden")) positionDropdown(btn, opts);
+  });
+}
+
+function updateMSBtn(btnId, set, label) {
+  document.getElementById(btnId).textContent = set.has("All") ? `All ${label}` : `${set.size} Selected`;
+}
+
+function positionDropdown(btn, opts) {
+  const r = btn.getBoundingClientRect();
+  opts.style.top    = r.bottom + "px";
+  opts.style.left   = r.left + "px";
+  opts.style.width  = r.width + "px";
+}
+
+function closeAllDropdowns(except) {
+  document.querySelectorAll(".ms-options, .ss-options").forEach(o => {
+    if (o.id !== except) o.classList.add("hidden");
+  });
+}
+
+// ─── Single-select (Reported) ─────────────────────────
+document.getElementById("reportedBtn").addEventListener("click", e => {
+  e.stopPropagation(); closeAllDropdowns("reportedOpts");
+  const o = document.getElementById("reportedOpts");
+  o.classList.toggle("hidden");
+  if (!o.classList.contains("hidden")) positionDropdown(document.getElementById("reportedBtn"), o);
+});
+document.querySelectorAll("#reportedOpts .ss-option").forEach(opt => {
+  opt.addEventListener("click", () => {
+    selectedReported = opt.dataset.value;
+    document.getElementById("reportedBtn").textContent = selectedReported;
+    document.getElementById("reportedOpts").classList.add("hidden");
+    refresh();
+  });
+});
+
+document.addEventListener("click", () => closeAllDropdowns("__none__"));
+
+// ─── Reposition open dropdowns on scroll/resize ───────
+function repositionOpenDropdowns() {
+  document.querySelectorAll(".ms-options:not(.hidden)").forEach(o => {
+    const btn = o.closest(".multi-select")?.querySelector(".ms-btn");
+    if (btn) positionDropdown(btn, o);
+  });
+  const ro = document.getElementById("reportedOpts");
+  if (!ro.classList.contains("hidden")) positionDropdown(document.getElementById("reportedBtn"), ro);
+}
+document.getElementById("sidebar").addEventListener("scroll", repositionOpenDropdowns, {passive:true});
+window.addEventListener("resize", repositionOpenDropdowns);
+
+// ─── Load incident data ───────────────────────────────
+fetch("https://palaemonmaritime.github.io/json.api/Global_Incidents.json")
+  .then(r => r.json())
+  .then(data => {
+    allData = data;
+    timelineDates = getTimelineDates();
+
+    buildMultiSelect("shipTypeBtn","shipTypeOpts",selectedShipTypes,"Ship Types","Ship Type");
+    buildMultiSelect("areaBtn",    "areaOpts",    selectedAreas,    "Maritime Zones","Area");
+    buildMultiSelect("stateBtn",   "stateOpts",   selectedStates,   "States","Reporting State");
+
+    const today = new Date();
+    document.getElementById("timeline-date").textContent = fmtDMY(today);
+    renderMarkersUpTo(today);
+    renderHeat(today);
+    updateStats();
+
+    const recent = findMostRecent(allData, today);
+    if (recent) setTimeout(() => openPopup(recent), 800);
+  })
+  .catch(console.error);
+
+// ─── AIS fetch ────────────────────────────────────────
+async function fetchAIS() {
+  const btn = document.getElementById("aisRefreshBtn");
+  const statusEl = document.getElementById("ais-status");
+  const statusTxt = document.getElementById("ais-status-text");
+
+  if (!document.getElementById("showAIS").checked) {
+    statusTxt.textContent = "AIS DISABLED";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "↻ Loading…";
+  statusEl.className = "";
+  statusTxt.textContent = "FETCHING…";
+
+  const timespan    = document.getElementById("aisTimespan").value || 60;
+  const vesselType  = document.getElementById("aisVesselType").value || "";
+
+  const params = new URLSearchParams({ timespan });
+  if (vesselType) params.set("vessel_type", vesselType);
+
+  try {
+    const res  = await fetch(`${PROXY_BASE}/api/ais?${params}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+
+    // MarineTraffic returns array of vessel objects
+    aisData = Array.isArray(json) ? json : (json.DATA || []);
+    renderAIS();
+
+    statusEl.className = "live";
+    statusTxt.textContent = `LIVE · ${aisData.length} VESSELS`;
+    document.getElementById("ais-vessel-count").textContent = `${aisData.length} vessels loaded`;
+    document.getElementById("statVessels").textContent = aisData.length;
+    document.getElementById("ais-legend").style.display = "block";
+
+  } catch (err) {
+    statusEl.className = "error";
+    statusTxt.textContent = "AIS ERROR";
+    document.getElementById("ais-vessel-count").textContent = `Error: ${err.message}`;
+    console.error("AIS fetch error:", err);
+  }
+
+  btn.disabled = false;
+  btn.textContent = "↻ Refresh AIS";
+}
+
+// Toggle AIS layer
+document.getElementById("showAIS").addEventListener("change", function() {
+  if (this.checked) {
+    aisLayer.addTo(map);
+    fetchAIS();
+  } else {
+    aisLayer.clearLayers();
+    aisLayer.remove();
+    document.getElementById("ais-legend").style.display = "none";
+    document.getElementById("ais-status").className = "";
+    document.getElementById("ais-status-text").textContent = "AIS OFFLINE";
+    document.getElementById("statVessels").textContent = "—";
+  }
+});
+
+// Render AIS markers
+function renderAIS() {
+  aisLayer.clearLayers();
+  aisData.forEach(v => {
+    const lat = parseFloat(v.LAT || v.LATITUDE);
+    const lon = parseFloat(v.LON || v.LONGITUDE);
+    if (isNaN(lat) || isNaN(lon)) return;
+
+    const type = parseInt(v.SHIPTYPE || 0);
+    let color = "#fbbf24"; // default yellow
+    if (type >= 70 && type <= 79) color = "#22c55e"; // cargo
+    else if (type >= 80 && type <= 89) color = "#3b82f6"; // tanker
+    else if (type >= 60 && type <= 69) color = "#a78bfa"; // passenger
+
+    const marker = L.circleMarker([lat, lon], {
+      radius: 4, color, weight: 1.5, fillColor: color, fillOpacity: 0.85,
+    });
+
+    const name   = v.SHIPNAME || v.NAME || "Unknown";
+    const mmsi   = v.MMSI   || "N/A";
+    const speed  = v.SPEED  || "N/A";
+    const course = v.COURSE || "N/A";
+    const dest   = v.DESTINATION || "N/A";
+
+    marker.bindPopup(`
+      <div style="min-width:220px;">
+        <div class="popup-title">${name}</div>
+        <div class="popup-ais-badge">LIVE AIS</div>
+        <div class="popup-row"><span class="popup-key">MMSI</span><span class="popup-val">${mmsi}</span></div>
+        <div class="popup-row"><span class="popup-key">Speed</span><span class="popup-val">${speed} kn</span></div>
+        <div class="popup-row"><span class="popup-key">Course</span><span class="popup-val">${course}°</span></div>
+        <div class="popup-row"><span class="popup-key">Destination</span><span class="popup-val">${dest}</span></div>
+      </div>`);
+    aisLayer.addLayer(marker);
+  });
+}
+
+// ─── Incident rendering ───────────────────────────────
+function getLatLon(item) {
+  const lat = parseFloat(item.Latitude_dd ?? item.Latitude);
+  const lon = parseFloat(item.Longitude_dd ?? item.Longitude);
+  return (isNaN(lat)||isNaN(lon)) ? null : [lat,lon];
+}
+
+function getColorByDaysAgo(d) {
+  if (d <= 0)  return "hsl(0,100%,50%)";
+  if (d <= 10) return `hsl(${(d/10)*60},100%,50%)`;
+  if (d <= 20) return `hsl(${60+((d-10)/10)*60},100%,50%)`;
+  if (d <= 30) return `hsl(${120+((d-20)/10)*120},100%,50%)`;
+  return "#3b82f6";
+}
+
+function applyFilters(incident, currentDate) {
+  const date = new Date(incident.Date);
+  if (isNaN(date) || date > currentDate) return false;
+  const sd = document.getElementById("startDate").value;
+  const ed = document.getElementById("endDate").value;
+  if (sd && date < new Date(sd)) return false;
+  if (ed && date > new Date(ed)) return false;
+  if (!(selectedShipTypes.has("All") || selectedShipTypes.has(incident["Ship Type"]||""))) return false;
+  if (!(selectedAreas.has("All")     || selectedAreas.has(incident.Area||"")))             return false;
+  if (!(selectedStates.has("All")    || selectedStates.has(incident["Reporting State"]||""))) return false;
+  const rep = incident["Reported?"]===true?"Yes":incident["Reported?"]===false?"No":"N/A";
+  if (selectedReported !== "All" && rep !== selectedReported) return false;
+  const imo = String(incident["IMO No."]??incident.IMO??"").toLowerCase();
+  if (imoTags.length && !imoTags.some(t => imo.includes(t))) return false;
+  const sn = String(incident["Ship Name"]??incident.SHIPNAME??"").toLowerCase();
+  if (shipNameTags.length && !shipNameTags.some(t => sn.includes(t))) return false;
+  return true;
+}
+
+function renderMarkersUpTo(currentDate) {
+  markerGroup.clearLayers();
+  const style = document.getElementById("mapStyleSelect").value;
+  const defaultColor = (style==="dark"||style==="satellite") ? "#F15D20" : "#1a1a1a";
+  const showHeat = document.getElementById("showHeatmap").checked;
+  let count = 0;
+
+  allData.forEach(inc => {
+    if (!applyFilters(inc, currentDate)) return;
+    const ll = getLatLon(inc); if (!ll) return;
+    const daysAgo = Math.floor((currentDate - new Date(inc.Date)) / 864e5);
+    const r = daysAgo <= 30 ? 8-(daysAgo/30)*4 : 4;
+    const c = showHeat ? getColorByDaysAgo(daysAgo) : defaultColor;
+    const o = daysAgo <= 30 ? 1-(daysAgo/30)*0.3 : 0.6;
+    const m = L.circleMarker(ll, { radius:r, color:c, weight:1, fillColor:c, fillOpacity:o });
+    m.bindPopup(buildIncidentPopup(inc));
+    markerGroup.addLayer(m);
+    count++;
+  });
+
+  document.getElementById("statIncidents").textContent = count;
+  document.getElementById("statDate").textContent = fmtDMY(currentDate);
+  document.getElementById("timeline-date").textContent = fmtDMY(currentDate);
+}
+
+function renderHeat(currentDate) {
+  if (heatLayer) map.removeLayer(heatLayer);
+  if (!document.getElementById("showHeatmap").checked) return;
+  const pts = [];
+  allData.forEach(inc => {
+    if (!applyFilters(inc, currentDate)) return;
+    const ll = getLatLon(inc); if (!ll) return;
+    const d = (currentDate - new Date(inc.Date)) / 864e5;
+    if (d <= 30) pts.push([ll[0], ll[1], Math.max(0, 1-(d/30))]);
+  });
+  heatLayer = L.heatLayer(pts, {
+    radius:22, blur:16, maxZoom:17,
+    gradient:{"0.0":"#3b82f6","0.3":"#22c55e","0.6":"#eab308","1.0":"#ef4444"}
+  }).addTo(map);
+}
+
+function buildIncidentPopup(inc) {
+  const rep = inc["Reported?"]===true?"Yes":inc["Reported?"]===false?"No":"N/A";
+  const rows = [
+    ["Date",          inc.Date],
+    ["Ship Name",     inc["Ship Name"]],
+    ["Ship Type",     inc["Ship Type"]],
+    ["IMO No.",       inc["IMO No."]||inc.IMO],
+    ["MSC/Circ",      inc["MSC/Circ"]],
+    ["Maritime Zone", inc.Area],
+    ["Incident",      inc["Incident details"]],
+    ["Consequences",  inc["Consequences for crew etc"]],
+    ["Action Taken",  inc["Action taken by master/crew"]],
+    ["Reported",      rep],
+    ["Reporting State", inc["Reporting State"]],
+    ["Coastal Action",  inc["Coastal State Action Taken"]],
+  ].filter(([,v]) => v);
+  return `<div style="max-height:360px;overflow-y:auto;min-width:260px;">
+    <div class="popup-title">${inc["Ship Name"]||"Unknown Vessel"}</div>
+    ${rows.map(([k,v])=>`<div class="popup-row"><span class="popup-key">${k}</span><span class="popup-val">${v||"N/A"}</span></div>`).join("")}
+  </div>`;
+}
+
+function findMostRecent(data, date) {
+  return data.reduce((best,inc) => {
+    const d = new Date(inc.Date);
+    if (isNaN(d)||d>date) return best;
+    return (!best||d>new Date(best.Date)) ? inc : best;
+  }, null);
+}
+
+function openPopup(inc) {
+  const ll = getLatLon(inc); if (!ll) return;
+  L.popup().setLatLng(ll).setContent(buildIncidentPopup(inc)).openOn(map);
+}
+
+function refresh() {
+  const d = getCurrentDate();
+  renderMarkersUpTo(d);
+  renderHeat(d);
+}
+
+// ─── Timeline ─────────────────────────────────────────
+function getTimelineDates() {
+  const sd = document.getElementById("startDate").value;
+  const ed = document.getElementById("endDate").value;
+  let dates = allData.map(i=>new Date(i.Date)).filter(d=>!isNaN(d));
+  if (sd) dates = dates.filter(d => d >= new Date(sd));
+  if (ed) dates = dates.filter(d => d <= new Date(ed));
+  dates.sort((a,b)=>a-b);
+  if (!dates.length) return [];
+  const result = [];
+  const cur = new Date(dates[0]);
+  const end = ed ? new Date(ed) : new Date();
+  while (cur <= end) { result.push(new Date(cur)); cur.setDate(cur.getDate()+1); }
+  return result;
+}
+
+function toggleTimeline() {
+  timelineDates = getTimelineDates();
+  if (!timelineDates.length) return;
+  if (isPlaying) {
+    clearInterval(timelineTimer); isPlaying = false;
+    document.getElementById("timelineBtn").textContent = "▶ Play";
+    document.getElementById("timelineBtn").classList.remove("active");
+  } else {
+    isPlaying = true;
+    document.getElementById("timelineBtn").textContent = "⏸ Pause";
+    document.getElementById("timelineBtn").classList.add("active");
+    if (timelineIndex >= timelineDates.length) timelineIndex = 0;
+    timelineTimer = setInterval(stepTimeline, 1000/speedMultiplier);
+  }
+}
+
+function stepTimeline() {
+  if (timelineIndex >= timelineDates.length) {
+    clearInterval(timelineTimer); isPlaying = false;
+    document.getElementById("timelineBtn").textContent = "▶ Play";
+    document.getElementById("timelineBtn").classList.remove("active");
+    return;
+  }
+  const d = timelineDates[timelineIndex++];
+  renderMarkersUpTo(d); renderHeat(d);
+  const pct = (timelineIndex/timelineDates.length)*100;
+  document.getElementById("tl-progress").style.width = pct+"%";
+}
+
+function jumpTimelineStart() {
+  clearInterval(timelineTimer); isPlaying = false;
+  document.getElementById("timelineBtn").textContent = "▶ Play";
+  document.getElementById("timelineBtn").classList.remove("active");
+  const dates = getTimelineDates(); if (!dates.length) return;
+  timelineIndex = 0;
+  renderMarkersUpTo(dates[0]); renderHeat(dates[0]);
+  document.getElementById("tl-progress").style.width = "0%";
+}
+function jumpTimelineEnd() {
+  clearInterval(timelineTimer); isPlaying = false;
+  document.getElementById("timelineBtn").textContent = "▶ Play";
+  document.getElementById("timelineBtn").classList.remove("active");
+  const dates = getTimelineDates(); if (!dates.length) return;
+  timelineIndex = dates.length-1;
+  const d = dates[timelineIndex];
+  renderMarkersUpTo(d); renderHeat(d);
+  document.getElementById("tl-progress").style.width = "100%";
+}
+function speedUpTimeline() {
+  const cycle = [1,2,4,8];
+  speedMultiplier = cycle[(cycle.indexOf(speedMultiplier)+1)%cycle.length];
+  document.getElementById("speedBtn").textContent = `${speedMultiplier}×`;
+  if (isPlaying) { clearInterval(timelineTimer); timelineTimer = setInterval(stepTimeline,1000/speedMultiplier); }
+}
+
+// ─── Date range event listeners ───────────────────────
+document.getElementById("startDate").addEventListener("change", () => {
+  timelineDates = getTimelineDates(); timelineIndex = 0;
+  const d = document.getElementById("startDate").value ? new Date(document.getElementById("startDate").value) : new Date();
+  renderMarkersUpTo(d); renderHeat(d);
+});
+document.getElementById("endDate").addEventListener("change", () => {
+  timelineDates = getTimelineDates(); timelineIndex = 0;
+  refresh();
+});
+document.getElementById("showHeatmap").addEventListener("change", refresh);
+document.getElementById("resetFiltersBtn").addEventListener("click", () => {
+  imoTags.length = 0; shipNameTags.length = 0;
+  ["imoInput","shipNameInput"].forEach(id => document.getElementById(id).value="");
+  ["imoTags","shipNameTags"].forEach(id => document.getElementById(id).innerHTML="");
+  selectedShipTypes.clear(); selectedShipTypes.add("All");
+  selectedAreas.clear();     selectedAreas.add("All");
+  selectedStates.clear();    selectedStates.add("All");
+  selectedReported = "All";
+  updateMSBtn("shipTypeBtn",selectedShipTypes,"Ship Types");
+  updateMSBtn("areaBtn",selectedAreas,"Maritime Zones");
+  updateMSBtn("stateBtn",selectedStates,"States");
+  document.getElementById("reportedBtn").textContent = "All";
+  ["shipTypeOpts","areaOpts","stateOpts"].forEach(id => {
+    document.getElementById(id).querySelectorAll("input[type=checkbox]").forEach(cb => { cb.checked=cb.value==="All"; });
+  });
+  timelineIndex = 0;
+  document.getElementById("tl-progress").style.width = "0%";
+  refresh();
+});
+</script>
+</body>
+</html>
