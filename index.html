@@ -43,6 +43,17 @@ body {
 }
 
 /* ─── TOP BAR ────────────────────────────────────── */
+#topbar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  z-index: 1100;
+  transition: height .3s ease;
+  height: var(--topbar-h);
+  overflow: visible;
+}
+#topbar-wrap.collapsed {
+  height: 0;
+}
 #topbar {
   height: var(--topbar-h);
   background: var(--surface);
@@ -53,8 +64,38 @@ body {
   padding: 0;
   flex-shrink: 0;
   position: relative;
-  z-index: 1100;
+  transition: transform .3s ease, opacity .3s ease;
 }
+#topbar-wrap.collapsed #topbar {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Handle tab sits below the topbar */
+#topbar-handle {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  color: var(--orange);
+  font-size: 9px;
+  transition: background .2s;
+}
+#topbar-handle:hover { background: var(--orange-gl); border-color: var(--border-hi); }
+#topbar-handle .topbar-arrow { transition: transform .3s ease; line-height: 1; }
+#topbar-wrap.collapsed #topbar-handle { border-top: 1px solid var(--border); bottom: -20px; }
+#topbar-wrap.collapsed #topbar-handle .topbar-arrow { transform: rotate(180deg); }
 
 #brand {
   display: flex;
@@ -254,19 +295,68 @@ input[type="date"]:hover, input[type="date"]:focus {
 }
 
 /* ─── SIDEBAR ───────────────────────────────────── */
+#sidebar-wrap {
+  display: flex;
+  flex-shrink: 0;
+  position: relative;
+  transition: width .3s ease;
+  width: var(--sidebar-w);
+}
+#sidebar-wrap.collapsed {
+  width: 0;
+}
 #sidebar {
   width: var(--sidebar-w);
   background: var(--surface);
   border-right: 1px solid var(--border);
   overflow-y: auto;
+  overflow-x: hidden;
   flex-shrink: 0;
+  /* RTL moves scrollbar to left side */
+  direction: rtl;
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: var(--orange) var(--surface);
   display: flex;
   flex-direction: column;
+  transition: transform .3s ease, opacity .3s ease;
 }
+#sidebar-wrap.collapsed #sidebar {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+/* Restore LTR for all content inside */
+#sidebar > * { direction: ltr; }
+
 #sidebar::-webkit-scrollbar { width: 4px; }
-#sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+#sidebar::-webkit-scrollbar-track { background: var(--surface); }
+#sidebar::-webkit-scrollbar-thumb { background: var(--orange); border-radius: 0; }
+#sidebar::-webkit-scrollbar-thumb:hover { background: var(--orange-dk); }
+
+/* ─── SIDEBAR TOGGLE HANDLE ─────────────────────── */
+#sidebar-handle {
+  position: absolute;
+  right: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 48px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  transition: background .2s;
+  color: var(--orange);
+  font-size: 10px;
+}
+#sidebar-handle:hover { background: var(--orange-gl); border-color: var(--border-hi); }
+#sidebar-handle .handle-arrow { transition: transform .3s ease; line-height: 1; }
+#sidebar-wrap.collapsed #sidebar-handle { border-left: 1px solid var(--border); }
+#sidebar-wrap.collapsed #sidebar-handle .handle-arrow { transform: rotate(180deg); }
 
 .sidebar-section {
   padding: 14px 16px;
@@ -592,7 +682,7 @@ input[type="date"]:hover, input[type="date"]:focus {
   position: relative;
   overflow: hidden;
 }
-#map { width: 100%; height: 100%; }
+#map { width: 100%; height: 100%; background: #0d0f13; }
 
 /* Map overlays */
 .map-overlay {
@@ -793,6 +883,10 @@ input[type="date"]:hover, input[type="date"]:focus {
 <body>
 
 <!-- ═══ TOP BAR ════════════════════════════════════ -->
+<div id="topbar-wrap">
+  <div id="topbar-handle" onclick="toggleTopbar()" title="Toggle toolbar">
+    <span class="topbar-arrow">▲</span>
+  </div>
 <div id="topbar">
   <div id="brand">
     <div class="logo-mark"></div>
@@ -842,12 +936,17 @@ input[type="date"]:hover, input[type="date"]:focus {
     <div class="dot"></div>
     <span id="ais-status-text">AIS OFFLINE</span>
   </div>
-</div>
+</div><!-- /topbar -->
+</div><!-- /topbar-wrap -->
 
 <!-- ═══ BODY ══════════════════════════════════════ -->
 <div id="body">
 
   <!-- ─── SIDEBAR ──────────────────────────────── -->
+  <div id="sidebar-wrap">
+    <div id="sidebar-handle" onclick="toggleSidebar()" title="Toggle sidebar">
+      <span class="handle-arrow">◀</span>
+    </div>
   <div id="sidebar">
 
     <!-- AIS Section -->
@@ -940,6 +1039,7 @@ input[type="date"]:hover, input[type="date"]:focus {
     </div>
 
   </div><!-- /sidebar -->
+  </div><!-- /sidebar-wrap -->
 
   <!-- ─── MAP ──────────────────────────────────── -->
   <div id="map-wrap">
@@ -992,8 +1092,27 @@ let aisData = [];
 let aisImoTags = [];
 let selectedAisVesselTypes = new Set(["All"]);
 
+// ─── Sidebar toggle ───────────────────────────────
+function toggleSidebar() {
+  const wrap = document.getElementById("sidebar-wrap");
+  wrap.classList.toggle("collapsed");
+  setTimeout(() => map.invalidateSize(), 320);
+}
+
+// ─── Topbar toggle ────────────────────────────────
+function toggleTopbar() {
+  const wrap = document.getElementById("topbar-wrap");
+  wrap.classList.toggle("collapsed");
+  setTimeout(() => map.invalidateSize(), 320);
+}
+
 // ─── Map init ────────────────────────────────────────
-const map = L.map("map", { zoomControl: false }).setView([10, 20], 2);
+const map = L.map("map", {
+  zoomControl: false,
+  minZoom: 2,
+}).setView([10, 20], 3);
+
+
 L.control.zoom({ position: "bottomright" }).addTo(map);
 
 const tileLayers = {
@@ -1145,7 +1264,25 @@ document.querySelectorAll("#reportedOpts .ss-option").forEach(opt => {
   });
 });
 
-document.addEventListener("click", () => closeAllDropdowns("__none__"));
+document.addEventListener("click", e => {
+  // Only close a dropdown if the click was outside that dropdown AND outside its button
+  document.querySelectorAll(".ms-options:not(.hidden)").forEach(o => {
+    const wrap = o.closest(".multi-select");
+    if (wrap && !wrap.contains(e.target)) o.classList.add("hidden");
+  });
+  // Close single-select (Reported) if clicked outside
+  const ro = document.getElementById("reportedOpts");
+  const rb = document.getElementById("reportedBtn");
+  if (!ro.classList.contains("hidden") && !ro.contains(e.target) && !rb.contains(e.target)) {
+    ro.classList.add("hidden");
+  }
+  // Close AIS vessel type if clicked outside
+  const ao = document.getElementById("aisVesselTypeOpts");
+  const ab = document.getElementById("aisVesselTypeBtn");
+  if (ao && !ao.classList.contains("hidden") && !ao.contains(e.target) && !ab.contains(e.target)) {
+    ao.classList.add("hidden");
+  }
+});
 
 // ─── Reposition open dropdowns on scroll/resize ───────
 function repositionOpenDropdowns() {
@@ -1358,17 +1495,13 @@ function renderAIS() {
     else if (type >= 80 && type <= 89) color = "#3b82f6"; // tanker
     else if (type >= 60 && type <= 69) color = "#a78bfa"; // passenger
 
-    const marker = L.circleMarker([lat, lon], {
-      radius: 4, color, weight: 1.5, fillColor: color, fillOpacity: 0.85,
-    });
-
     const name   = v.SHIPNAME || v.NAME || "Unknown";
     const mmsi   = v.MMSI   || "N/A";
     const speed  = v.SPEED  || "N/A";
     const course = v.COURSE || "N/A";
     const dest   = v.DESTINATION || "N/A";
 
-    marker.bindPopup(`
+    const popupHtml = `
       <div class="popup-inner" style="min-width:400px;">
         <div class="popup-title">${name}</div>
         <div class="popup-ais-badge">LIVE AIS</div>
@@ -1376,7 +1509,14 @@ function renderAIS() {
         <div class="popup-row"><span class="popup-key">Speed</span><span class="popup-val">${speed} kn</span></div>
         <div class="popup-row"><span class="popup-key">Course</span><span class="popup-val">${course}°</span></div>
         <div class="popup-row"><span class="popup-key">Destination</span><span class="popup-val">${dest}</span></div>
-      </div>`);
+      </div>`;
+
+    const wrappedLon = wrapLon(lon, map.getCenter().lng);
+    const marker = L.circleMarker([lat, wrappedLon], {
+      radius: 4, color, weight: 1.5, fillColor: color, fillOpacity: 0.85,
+    });
+    marker._origLon = lon;
+    marker.bindPopup(popupHtml);
     aisLayer.addLayer(marker);
   });
 }
@@ -1415,11 +1555,37 @@ function applyFilters(incident, currentDate) {
   return true;
 }
 
+// ─── Wrap longitude to nearest equivalent to a reference lon ─
+function wrapLon(lon, refLon) {
+  while (lon < refLon - 180) lon += 360;
+  while (lon > refLon + 180) lon -= 360;
+  return lon;
+}
+
+// Reproject all markers to match current viewport on pan/zoom
+function rewrapMarkers() {
+  const centreLon = map.getCenter().lng;
+  markerGroup.eachLayer(m => {
+    if (m._origLon === undefined) return;
+    const newLon = wrapLon(m._origLon, centreLon);
+    const cur = m.getLatLng();
+    if (Math.abs(cur.lng - newLon) > 0.0001) m.setLatLng([cur.lat, newLon]);
+  });
+  aisLayer.eachLayer(m => {
+    if (m._origLon === undefined) return;
+    const newLon = wrapLon(m._origLon, centreLon);
+    const cur = m.getLatLng();
+    if (Math.abs(cur.lng - newLon) > 0.0001) m.setLatLng([cur.lat, newLon]);
+  });
+}
+map.on("moveend", rewrapMarkers);
+
 function renderMarkersUpTo(currentDate) {
   markerGroup.clearLayers();
   const style = document.getElementById("mapStyleSelect").value;
   const defaultColor = (style==="dark"||style==="satellite") ? "#F15D20" : "#1a1a1a";
   const showHeat = document.getElementById("showHeatmap").checked;
+  const centreLon = map.getCenter().lng;
   let count = 0;
 
   allData.forEach(inc => {
@@ -1429,7 +1595,11 @@ function renderMarkersUpTo(currentDate) {
     const r = daysAgo <= 30 ? 8-(daysAgo/30)*4 : 4;
     const c = showHeat ? getColorByDaysAgo(daysAgo) : defaultColor;
     const o = daysAgo <= 30 ? 1-(daysAgo/30)*0.3 : 0.6;
-    const m = L.circleMarker(ll, { radius:r, color:c, weight:1, fillColor:c, fillOpacity:o });
+
+    // Place marker at the longitude nearest to current viewport
+    const wrappedLon = wrapLon(ll[1], centreLon);
+    const m = L.circleMarker([ll[0], wrappedLon], { radius:r, color:c, weight:1, fillColor:c, fillOpacity:o });
+    m._origLon = ll[1]; // store original for rewrapping
     m.bindPopup(buildIncidentPopup(inc));
     markerGroup.addLayer(m);
     count++;
@@ -1448,7 +1618,10 @@ function renderHeat(currentDate) {
     if (!applyFilters(inc, currentDate)) return;
     const ll = getLatLon(inc); if (!ll) return;
     const d = (currentDate - new Date(inc.Date)) / 864e5;
-    if (d <= 30) pts.push([ll[0], ll[1], Math.max(0, 1-(d/30))]);
+    if (d <= 30) {
+      const intensity = Math.max(0, 1-(d/30));
+      pts.push([ll[0], ll[1], intensity]);
+    }
   });
   heatLayer = L.heatLayer(pts, {
     radius:22, blur:16, maxZoom:17,
