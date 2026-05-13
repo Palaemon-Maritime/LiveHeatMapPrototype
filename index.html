@@ -324,6 +324,43 @@ input[type="date"]:hover, input[type="date"]:focus {
 }
 .ais-input:focus { border-color: var(--border-hi); }
 
+/* Number input spinner — hide native, use custom orange arrows */
+.ais-input[type="number"] {
+  -moz-appearance: textfield;
+  padding-right: 22px;
+}
+.ais-input[type="number"]::-webkit-inner-spin-button,
+.ais-input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* Wrapper needed for custom arrows */
+.ais-number-wrap {
+  position: relative;
+  width: 90px;
+}
+.ais-number-wrap .spin-btn {
+  position: absolute;
+  right: 0;
+  width: 18px;
+  height: 50%;
+  background: var(--surface);
+  border: none;
+  border-left: 1px solid var(--border);
+  color: var(--orange);
+  font-size: 8px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background .15s;
+}
+.ais-number-wrap .spin-btn:hover { background: var(--orange-gl); }
+.ais-number-wrap .spin-up   { top: 0;   border-bottom: 1px solid var(--border); }
+.ais-number-wrap .spin-down { bottom: 0; }
+
 .ais-refresh-btn {
   width: 100%;
   height: 30px;
@@ -640,18 +677,9 @@ input[type="date"]:hover, input[type="date"]:focus {
   box-shadow: 0 0 6px var(--orange);
 }
 
-/* Leaflet popup override */
-.leaflet-popup-content-wrapper {
-  background: var(--surface2) !important;
-  border: 1px solid var(--border-hi) !important;
-  border-radius: 0 !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,.6) !important;
-  color: var(--text) !important;
-  font-family: var(--mono) !important;
-  font-size: 11px !important;
-}
+/* popup styles defined above */
 .leaflet-popup-tip { background: var(--surface2) !important; }
-.leaflet-popup-close-button { color: var(--text-dim) !important; font-size: 16px !important; }
+.leaflet-popup-close-button { color: var(--text-dim) !important; font-size: 16px !important; top: 8px !important; right: 8px !important; }
 .popup-row { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
 .popup-key { color: var(--text-dim); min-width: 110px; flex-shrink: 0; }
 .popup-val { color: var(--text); word-break: break-word; }
@@ -679,6 +707,87 @@ input[type="date"]:hover, input[type="date"]:focus {
 }
 
 .hidden { display: none !important; }
+
+/* ais vessel type now uses standard .ms-btn / .ms-options multi-select */
+
+/* ─── Themed zoom control ────────────────────────────── */
+.leaflet-control-zoom {
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin: 0 0 6px 0 !important;
+}
+/* Position zoom above the heat legend (legend is ~78px tall + 36px bottom = 114px) */
+.leaflet-bottom.leaflet-right {
+  bottom: 120px !important;
+  right: 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  gap: 0 !important;
+}
+/* Keep attribution in its natural bottom-right corner */
+.leaflet-control-attribution {
+  position: fixed !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  margin: 0 !important;
+  background: rgba(7,8,10,0.75) !important;
+  color: var(--text-dim) !important;
+  font-family: var(--mono) !important;
+  font-size: 9px !important;
+  padding: 2px 6px !important;
+  border-top-left-radius: 0 !important;
+}
+.leaflet-control-attribution a { color: var(--text-dim) !important; }
+.leaflet-control-zoom a {
+  background: var(--surface) !important;
+  color: var(--orange) !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  font-family: var(--mono) !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  width: 28px !important;
+  height: 28px !important;
+  line-height: 28px !important;
+  transition: background .2s, color .2s !important;
+}
+.leaflet-control-zoom a:last-child { border-bottom: none !important; }
+.leaflet-control-zoom a:hover {
+  background: var(--orange-gl) !important;
+  color: var(--orange) !important;
+}
+
+/* ─── Popup scrollbar themed ─────────────────────────── */
+.leaflet-popup-content-wrapper {
+  background: var(--surface2) !important;
+  border: 1px solid var(--border-hi) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6) !important;
+  color: var(--text) !important;
+  font-family: var(--mono) !important;
+  font-size: 11px !important;
+  padding: 0 !important;
+  min-width: 420px !important;
+}
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: 100% !important;
+  min-width: 420px !important;
+}
+.popup-inner {
+  max-height: 340px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 16px 12px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--orange) var(--surface);
+}
+.popup-inner::-webkit-scrollbar { width: 4px; }
+.popup-inner::-webkit-scrollbar-track { background: var(--surface); }
+.popup-inner::-webkit-scrollbar-thumb { background: var(--orange); border-radius: 0; }
+.popup-inner::-webkit-scrollbar-thumb:hover { background: var(--orange-dk); }
 </style>
 </head>
 <body>
@@ -747,11 +856,23 @@ input[type="date"]:hover, input[type="date"]:focus {
       <div class="ais-control">
         <div class="ais-row">
           <label>Timespan (min)</label>
-          <input type="number" class="ais-input" id="aisTimespan" value="60" min="10" max="1440" />
+          <div class="ais-number-wrap">
+            <input type="number" class="ais-input" id="aisTimespan" value="60" min="10" max="1440" />
+            <button class="spin-btn spin-up"   onclick="document.getElementById('aisTimespan').stepUp();  ">▲</button>
+            <button class="spin-btn spin-down" onclick="document.getElementById('aisTimespan').stepDown();">▼</button>
+          </div>
         </div>
         <div class="ais-row">
           <label>Vessel Type</label>
-          <input type="text" class="ais-input" id="aisVesselType" placeholder="All" />
+        </div>
+        <div class="multi-select" id="aisVesselTypeMS">
+          <button class="ms-btn" id="aisVesselTypeBtn">All Vessel Types</button>
+          <div class="ms-options hidden" id="aisVesselTypeOpts"></div>
+        </div>
+        <div>
+          <label style="font-family:var(--mono);font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">IMO Number</label>
+          <input type="text" class="filter-input" id="aisImoInput" placeholder="IMO No. + Enter" style="margin-bottom:4px;" />
+          <div id="aisImoTags" class="tag-container"></div>
         </div>
         <button class="ais-refresh-btn" id="aisRefreshBtn" onclick="fetchAIS()">↻ Refresh AIS</button>
         <div id="ais-vessel-count">— vessels loaded</div>
@@ -760,7 +881,7 @@ input[type="date"]:hover, input[type="date"]:focus {
 
     <!-- Incident Filters -->
     <div class="sidebar-section">
-      <div class="section-header">Filters</div>
+      <div class="section-header">Incidents</div>
 
       <span class="filter-label">IMO Number</span>
       <input type="text" class="filter-input" id="imoInput" placeholder="Enter IMO + press Enter" />
@@ -868,6 +989,8 @@ let markerGroup = null;
 let timelineDates = [], timelineIndex = 0, timelineTimer = null;
 let isPlaying = false, speedMultiplier = 1;
 let aisData = [];
+let aisImoTags = [];
+let selectedAisVesselTypes = new Set(["All"]);
 
 // ─── Map init ────────────────────────────────────────
 const map = L.map("map", { zoomControl: false }).setView([10, 20], 2);
@@ -909,24 +1032,25 @@ function getCurrentDate() {
 })();
 
 // ─── Tag inputs ──────────────────────────────────────
-function setupTagInput(inputId, containerId, arr) {
+function setupTagInput(inputId, containerId, arr, aisMode = false) {
   const el = document.getElementById(inputId);
+  if (!el) return;
   el.addEventListener("keydown", e => {
     if (e.key === "Enter" && el.value.trim()) {
       e.preventDefault();
       const v = el.value.trim().toLowerCase();
-      if (!arr.includes(v)) { arr.push(v); renderTags(containerId, arr); refresh(); }
+      if (!arr.includes(v)) { arr.push(v); renderTags(containerId, arr, aisMode); if (!aisMode) refresh(); else renderAIS(); }
       el.value = "";
     }
   });
 }
-function renderTags(containerId, arr) {
+function renderTags(containerId, arr, aisMode = false) {
   const c = document.getElementById(containerId);
   c.innerHTML = "";
   arr.forEach(tag => {
     const d = document.createElement("div"); d.className = "tag";
     d.innerHTML = `${tag}<button>×</button>`;
-    d.querySelector("button").onclick = () => { arr.splice(arr.indexOf(tag),1); renderTags(containerId,arr); refresh(); };
+    d.querySelector("button").onclick = () => { arr.splice(arr.indexOf(tag),1); renderTags(containerId, arr, aisMode); if (!aisMode) refresh(); else renderAIS(); };
     c.appendChild(d);
   });
 }
@@ -1050,12 +1174,101 @@ fetch("https://palaemonmaritime.github.io/json.api/Global_Incidents.json")
     document.getElementById("timeline-date").textContent = fmtDMY(today);
     renderMarkersUpTo(today);
     renderHeat(today);
-    updateStats();
 
     const recent = findMostRecent(allData, today);
     if (recent) setTimeout(() => openPopup(recent), 800);
   })
   .catch(console.error);
+
+// Build AIS vessel-type multi-select from actual AIS data
+function buildAisVesselTypeMultiSelect() {
+  const btn  = document.getElementById("aisVesselTypeBtn");
+  const opts = document.getElementById("aisVesselTypeOpts");
+  opts.innerHTML = "";  // clear previous
+
+  // Extract unique SHIPTYPE values from loaded AIS data
+  const typeMap = {
+    "20":"Wing in ground","21":"Wing in ground (hazcat A)","22":"Wing in ground (hazcat B)",
+    "23":"Wing in ground (hazcat C)","24":"Wing in ground (hazcat D)",
+    "30":"Fishing","31":"Towing","32":"Towing (large)","33":"Dredging",
+    "34":"Diving ops","35":"Military","36":"Sailing","37":"Pleasure craft",
+    "40":"HSC","41":"HSC (hazcat A)","42":"HSC (hazcat B)","43":"HSC (hazcat C)",
+    "44":"HSC (hazcat D)","49":"HSC other",
+    "50":"Pilot vessel","51":"SAR","52":"Tug","53":"Port tender","54":"Anti-pollution",
+    "55":"Law enforcement","58":"Medical","59":"Non-combatant",
+    "60":"Passenger","61":"Passenger (hazcat A)","62":"Passenger (hazcat B)",
+    "63":"Passenger (hazcat C)","64":"Passenger (hazcat D)","69":"Passenger other",
+    "70":"Cargo","71":"Cargo (hazcat A)","72":"Cargo (hazcat B)",
+    "73":"Cargo (hazcat C)","74":"Cargo (hazcat D)","79":"Cargo other",
+    "80":"Tanker","81":"Tanker (hazcat A)","82":"Tanker (hazcat B)",
+    "83":"Tanker (hazcat C)","84":"Tanker (hazcat D)","89":"Tanker other",
+    "90":"Other","91":"Other (hazcat A)","92":"Other (hazcat B)",
+    "93":"Other (hazcat C)","94":"Other (hazcat D)","99":"Other (no info)",
+  };
+
+  // Get unique types present in the data
+  const presentTypes = [...new Set(aisData.map(v => String(v.SHIPTYPE || "")).filter(Boolean))].sort((a,b)=>Number(a)-Number(b));
+
+  // Search box
+  const search = document.createElement("input");
+  search.type = "text"; search.className = "ms-search"; search.placeholder = "Search types…";
+  opts.appendChild(search);
+
+  // All option
+  const allLbl = document.createElement("label");
+  allLbl.innerHTML = `<input type="checkbox" value="All" ${selectedAisVesselTypes.has("All")?"checked":""}> All Vessel Types`;
+  opts.appendChild(allLbl);
+  allLbl.querySelector("input").addEventListener("change", e => {
+    if (e.target.checked) {
+      selectedAisVesselTypes.clear(); selectedAisVesselTypes.add("All");
+      opts.querySelectorAll("input[type=checkbox]").forEach(cb => { if (cb.value!=="All") cb.checked=false; });
+    } else { selectedAisVesselTypes.delete("All"); }
+    updateMSBtn("aisVesselTypeBtn", selectedAisVesselTypes, "Vessel Types");
+    renderAIS();
+  });
+
+  if (presentTypes.length === 0) {
+    const empty = document.createElement("div");
+    empty.style.cssText = "padding:8px 10px;font-family:var(--mono);font-size:10px;color:var(--text-dim);font-style:italic;";
+    empty.textContent = "Load AIS data first";
+    opts.appendChild(empty);
+  } else {
+    presentTypes.forEach(typeId => {
+      const label = typeMap[typeId] ? `${typeMap[typeId]} (${typeId})` : `Type ${typeId}`;
+      const lbl = document.createElement("label");
+      lbl.innerHTML = `<input type="checkbox" value="${typeId}" ${selectedAisVesselTypes.has(typeId)?"checked":""}> ${label}`;
+      opts.appendChild(lbl);
+      lbl.querySelector("input").addEventListener("change", e => {
+        if (e.target.checked) {
+          selectedAisVesselTypes.add(typeId); selectedAisVesselTypes.delete("All");
+          opts.querySelector("input[value='All']").checked = false;
+        } else { selectedAisVesselTypes.delete(typeId); }
+        if (!selectedAisVesselTypes.size) { selectedAisVesselTypes.add("All"); opts.querySelector("input[value='All']").checked = true; }
+        updateMSBtn("aisVesselTypeBtn", selectedAisVesselTypes, "Vessel Types");
+        renderAIS();
+      });
+    });
+  }
+
+  search.addEventListener("input", () => {
+    const t = search.value.toLowerCase();
+    opts.querySelectorAll("label").forEach(lbl => {
+      const cb = lbl.querySelector("input[type=checkbox]");
+      lbl.style.display = (cb?.value==="All" || lbl.textContent.toLowerCase().includes(t)) ? "" : "none";
+    });
+  });
+}
+
+// Wire the AIS vessel type button click once — separate from the rebuild function
+document.getElementById("aisVesselTypeBtn").addEventListener("click", e => {
+  e.stopPropagation();
+  closeAllDropdowns("aisVesselTypeOpts");
+  const opts = document.getElementById("aisVesselTypeOpts");
+  opts.classList.toggle("hidden");
+  if (!opts.classList.contains("hidden")) positionDropdown(document.getElementById("aisVesselTypeBtn"), opts);
+});
+
+// AIS IMO tag input wired at bottom with other inits
 
 // ─── AIS fetch ────────────────────────────────────────
 async function fetchAIS() {
@@ -1073,11 +1286,8 @@ async function fetchAIS() {
   statusEl.className = "";
   statusTxt.textContent = "FETCHING…";
 
-  const timespan    = document.getElementById("aisTimespan").value || 60;
-  const vesselType  = document.getElementById("aisVesselType").value || "";
-
+  const timespan = document.getElementById("aisTimespan").value || 60;
   const params = new URLSearchParams({ timespan });
-  if (vesselType) params.set("vessel_type", vesselType);
 
   try {
     const res  = await fetch(`${PROXY_BASE}/api/ais?${params}`);
@@ -1086,6 +1296,10 @@ async function fetchAIS() {
 
     // MarineTraffic returns array of vessel objects
     aisData = Array.isArray(json) ? json : (json.DATA || []);
+
+    // Rebuild vessel type dropdown from actual data, reset selection
+    selectedAisVesselTypes.clear(); selectedAisVesselTypes.add("All");
+    buildAisVesselTypeMultiSelect();
     renderAIS();
 
     statusEl.className = "live";
@@ -1128,6 +1342,16 @@ function renderAIS() {
     const lon = parseFloat(v.LON || v.LONGITUDE);
     if (isNaN(lat) || isNaN(lon)) return;
 
+    // AIS vessel type filter
+    const typeStr = String(v.SHIPTYPE || "");
+    if (!selectedAisVesselTypes.has("All") && !selectedAisVesselTypes.has(typeStr)) return;
+
+    // AIS IMO filter
+    if (aisImoTags.length) {
+      const imo = String(v.IMO || v.MMSI || "").toLowerCase();
+      if (!aisImoTags.some(t => imo.includes(t))) return;
+    }
+
     const type = parseInt(v.SHIPTYPE || 0);
     let color = "#fbbf24"; // default yellow
     if (type >= 70 && type <= 79) color = "#22c55e"; // cargo
@@ -1145,7 +1369,7 @@ function renderAIS() {
     const dest   = v.DESTINATION || "N/A";
 
     marker.bindPopup(`
-      <div style="min-width:220px;">
+      <div class="popup-inner" style="min-width:400px;">
         <div class="popup-title">${name}</div>
         <div class="popup-ais-badge">LIVE AIS</div>
         <div class="popup-row"><span class="popup-key">MMSI</span><span class="popup-val">${mmsi}</span></div>
@@ -1248,7 +1472,7 @@ function buildIncidentPopup(inc) {
     ["Reporting State", inc["Reporting State"]],
     ["Coastal Action",  inc["Coastal State Action Taken"]],
   ].filter(([,v]) => v);
-  return `<div style="max-height:360px;overflow-y:auto;min-width:260px;">
+  return `<div class="popup-inner" style="min-width:400px;">
     <div class="popup-title">${inc["Ship Name"]||"Unknown Vessel"}</div>
     ${rows.map(([k,v])=>`<div class="popup-row"><span class="popup-key">${k}</span><span class="popup-val">${v||"N/A"}</span></div>`).join("")}
   </div>`;
@@ -1345,6 +1569,10 @@ function speedUpTimeline() {
 }
 
 // ─── Date range event listeners ───────────────────────
+// Init AIS controls (safe here — all functions defined above)
+setupTagInput("aisImoInput", "aisImoTags", aisImoTags, true);
+buildAisVesselTypeMultiSelect();
+
 document.getElementById("startDate").addEventListener("change", () => {
   timelineDates = getTimelineDates(); timelineIndex = 0;
   const d = document.getElementById("startDate").value ? new Date(document.getElementById("startDate").value) : new Date();
