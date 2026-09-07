@@ -1297,7 +1297,7 @@ document.getElementById("sidebar").addEventListener("scroll", repositionOpenDrop
 window.addEventListener("resize", repositionOpenDropdowns);
 
 // ─── Load incident data ───────────────────────────────
-fetch("https://palaemonmaritime.github.io/json.api/Global_Incidents.json")
+fetch("https://palaemon-maritime.github.io/json.api/Global_Incidents.json")
   .then(r => r.json())
   .then(data => {
     allData = data;
