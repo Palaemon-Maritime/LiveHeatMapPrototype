@@ -1116,7 +1116,7 @@ const map = L.map("map", {
 L.control.zoom({ position: "bottomright" }).addTo(map);
 
 const tileLayers = {
-  dark:      L.tileLayer("https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png", { attribution: "© CartoDB © OSM" }),
+ dark: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?key=cb1_30ha_1_98f31f9c48da1d3e0a340080", { attribution: "© CARTO © OSM", subdomains: "abcd" }),
   light:     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                          { attribution: "© OpenStreetMap" }),
   satellite: L.tileLayer("https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",                         { attribution: "© Google Maps" }),
 };
